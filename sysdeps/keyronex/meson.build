@@ -6,11 +6,7 @@ rtld_sources += files(
 libc_sources += files(
 	'generic/entry.cpp',
 	'generic/generic.cpp',
-	'generic/linux.cpp',
-	'generic/signal.cpp',
-	'generic/socket.cpp',
-	'generic/thread.cpp',
-	'generic/thread.S'
+#	host_machine.cpu_family() / 'thread.S'
 )
 
 if not no_headers
@@ -59,7 +55,6 @@ if not no_headers
 		'include/abi-bits/ioctls.h',
 		'include/abi-bits/xattr.h',
 		subdir: 'abi-bits',
-		follow_symlinks: true
 	)
 
 	install_headers(
@@ -96,4 +91,3 @@ if not headers_only
 		install_dir: get_option('libdir')
 	)
 endif
-
