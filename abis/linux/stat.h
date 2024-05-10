@@ -117,6 +117,27 @@ struct stat {
 	struct timespec st_ctim;
 };
 
+#elif defined (__m68k__)
+
+/* placeholder, not correct... */
+struct stat {
+	unsigned short st_dev;
+	unsigned short __pad1;
+	unsigned long st_ino;
+	unsigned short st_mode;
+	unsigned short st_nlink;
+	unsigned short st_uid;
+	unsigned short st_gid;
+	unsigned short st_rdev;
+	unsigned short __pad2;
+	unsigned long st_size;
+	unsigned long st_blksize;
+	unsigned long st_blocks;
+	struct timespec st_atim;
+	struct timespec st_mtim;
+	struct timespec st_ctim;
+};
+
 #endif
 
 #define stat64 stat

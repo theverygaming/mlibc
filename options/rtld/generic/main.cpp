@@ -24,9 +24,9 @@
 #define HIDDEN  __attribute__((__visibility__("hidden")))
 #define EXPORT  __attribute__((__visibility__("default")))
 
-static constexpr bool logEntryExit = false;
-static constexpr bool logStartup = false;
-static constexpr bool logDlCalls = false;
+static constexpr bool logEntryExit = true;
+static constexpr bool logStartup = true;
+static constexpr bool logDlCalls = true;
 
 #ifndef MLIBC_STATIC_BUILD
 extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
@@ -63,7 +63,7 @@ DebugInterface globalDebugInterface;
 
 // Use a PC-relative instruction sequence to find our runtime load address.
 uintptr_t getLdsoBase() {
-#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__)
+#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__) || defined (__m68k__)
 	// On x86_64, the first GOT entry holds the link-time address of _DYNAMIC.
 	// TODO: This isn't guaranteed on AArch64, so this might fail with some linkers.
 	auto linktime_dynamic = reinterpret_cast<uintptr_t>(_GLOBAL_OFFSET_TABLE_[0]);
@@ -159,6 +159,37 @@ extern "C" void relocateSelf() {
 		}
 	}
 }
+
+extern "C" void relocateSelf68k(elf_dyn *dynamic, uintptr_t ldso_base) {
+	size_t rela_offset = 0;
+	size_t rela_size = 0;
+	for(size_t i = 0; dynamic[i].d_tag != DT_NULL; i++) {
+		auto ent = &dynamic[i];
+		switch(ent->d_tag) {
+		case DT_RELA: rela_offset = ent->d_un.d_ptr; break;
+		case DT_RELASZ: rela_size = ent->d_un.d_val; break;
+		}
+	}
+
+	for(size_t disp = 0; disp < rela_size; disp += sizeof(elf_rela)) {
+		auto reloc = reinterpret_cast<elf_rela *>(ldso_base + rela_offset + disp);
+		auto type = ELF_R_TYPE(reloc->r_info);
+
+		auto p = reinterpret_cast<uintptr_t *>(ldso_base + reloc->r_offset);
+		switch(type) {
+		case R_NONE:
+			break;
+
+		case R_RELATIVE:
+			*p = ldso_base + reloc->r_addend;
+			break;
+		default: {
+			__builtin_trap();
+		}
+		}
+	}
+}
+
 #endif
 
 extern "C" void *lazyRelocate(SharedObject *object, unsigned int rel_index) {

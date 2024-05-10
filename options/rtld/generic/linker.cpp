@@ -25,11 +25,11 @@ enum {
 uintptr_t libraryBase = 0x41000000;
 #endif
 
-constexpr bool verbose = false;
-constexpr bool stillSlightlyVerbose = false;
-constexpr bool logBaseAddresses = false;
-constexpr bool logRpath = false;
-constexpr bool logLdPath = false;
+constexpr bool verbose = true;
+constexpr bool stillSlightlyVerbose = true;
+constexpr bool logBaseAddresses = true;
+constexpr bool logRpath = true;
+constexpr bool logLdPath = true;
 constexpr bool eagerBinding = true;
 
 #if defined(__x86_64__) || defined(__i386__)
@@ -41,6 +41,9 @@ constexpr inline uintptr_t tlsOffsetFromTp = 16;
 #elif defined(__riscv)
 constexpr inline bool tlsAboveTp = true;
 constexpr inline uintptr_t tlsOffsetFromTp = 0;
+#elif defined(__m68k__)
+constexpr inline bool tlsAboveTp = true;
+constexpr inline ptrdiff_t tlsOffsetFromTp = -0x7000;
 #else
 #	error Unknown architecture
 #endif
@@ -1876,4 +1879,3 @@ void Loader::_processLazyRelocations(SharedObject *object) {
 		}
 	}
 }
-

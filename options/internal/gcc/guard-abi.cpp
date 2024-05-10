@@ -31,6 +31,7 @@ struct Guard {
 	// the first byte's meaning is fixed by the ABI.
 	// it indicates whether initialization has already been completed.
 	uint8_t complete;
+	uint32_t padding: 24;
 
 	// we use some of the remaining bytes to implement a mutex.
 	uint32_t mutex;
@@ -65,4 +66,3 @@ extern "C" [[ gnu::visibility("hidden") ]] void __cxa_guard_release(int64_t *ptr
 	__atomic_store_n(&guard->complete, 1, __ATOMIC_RELEASE);
 	guard->unlock();
 }
-

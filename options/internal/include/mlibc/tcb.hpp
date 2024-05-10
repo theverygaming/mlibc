@@ -177,6 +177,7 @@ static_assert(sizeof(Tcb) - offsetof(Tcb, cancelBits) - TP_TCB_OFFSET == 80);
 // sysdeps/linux/riscv64/cp_syscall.S needs to be updated whenever
 // the struct is expanded.
 static_assert(sizeof(Tcb) - offsetof(Tcb, cancelBits) == 96);
+#elif defined (__m68k__)
 #else
 #error "Missing architecture specific code."
 #endif

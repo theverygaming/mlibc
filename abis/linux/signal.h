@@ -488,6 +488,17 @@ typedef struct __ucontext {
 	mcontext_t uc_mcontext;
 } ucontext_t;
 
+
+#elif defined (__m68k__)
+
+typedef struct {
+	uintptr_t empty;
+} mcontext_t;
+
+typedef struct __ucontext {
+	uintptr_t empty;
+} ucontext_t;
+
 #else
 #error "Missing architecture specific code."
 #endif
