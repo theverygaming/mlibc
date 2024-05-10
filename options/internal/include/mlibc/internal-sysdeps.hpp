@@ -16,6 +16,7 @@ void sys_libc_log(const char *message);
 [[noreturn]] void sys_libc_panic();
 
 int sys_tcb_set(void *pointer);
+[[gnu::weak]] void *sys_tp_get();
 
 [[gnu::weak]] int sys_futex_tid();
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time);
