@@ -6,7 +6,15 @@
 enum krx_syscall {
 	kKrxDebugMessage,
 
+	kKrxTcbSet,
+	kKrxTcbGet,
+
 	kKrxVmAllocate,
+	kKrxVmMap,
+
+	kKrxFileOpen,
+	kKrxFileReadCached,
+	kKrxFileSeek,
 };
 
 #if defined(__x86_64__)
@@ -147,10 +155,14 @@ sc_error(uintptr_t ret)
 static inline uintptr_t
 syscall0(uintptr_t num, uintptr_t *out)
 {
-	(void)num;
-	(void)out;
-	for (;;) ;
-	return 0;
+	register uintptr_t d0 asm("d0") = num, d1 asm("d1");
+
+	asm volatile("trap #0\n\t" : "+r"(d0) : "r"(d1) : "memory");
+
+	if (out)
+		*out = d1;
+
+	return d0;
 }
 
 static inline uintptr_t

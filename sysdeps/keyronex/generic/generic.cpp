@@ -11,6 +11,9 @@
 #include <mlibc/debug.hpp>
 #include <stdlib.h>
 
+#include "abi-bits/vm-flags.h"
+#include "mlibc/tcb.hpp"
+
 #define STUB_ONLY                                           \
 	{                                                   \
 		__ensure(!"STUB_ONLY function was called"); \
@@ -35,7 +38,18 @@ sys_libc_panic()
 
 int sys_tcb_set(void *pointer)
 {
-	STUB_ONLY
+	syscall1(kKrxTcbSet, (uintptr_t)pointer + 0x7000 + sizeof(Tcb), NULL);
+	return 0;
+}
+
+[[gnu::weak]] void *sys_tp_get()
+{
+	return (void*)syscall0(kKrxTcbGet, NULL);
+}
+
+extern "C" void *__m68k_read_tp (void)
+{
+	return sys_tp_get();
 }
 
 [[gnu::weak]] int sys_futex_tid()
@@ -50,7 +64,7 @@ int sys_futex_wait(int *pointer, int expected, const struct timespec *time)
 
 int sys_futex_wake(int *pointer)
 {
-	STUB_ONLY
+	return 0;
 }
 
 [[noreturn]] void sys_exit(int status)
@@ -63,9 +77,11 @@ int sys_anon_allocate(size_t size, void **pointer)
 	int r;
 	uintptr_t out;
 	r = syscall1(kKrxVmAllocate, size, &out);
-	if (r == 0)
+	if (r == 0) {
 		*pointer = (void*)out;
-	return r;
+		return 0;
+	}
+	return -r;
 }
 
 int sys_anon_free(void *pointer, size_t size)
@@ -77,27 +93,51 @@ int sys_anon_free(void *pointer, size_t size)
 
 int sys_open(const char *pathname, int flags, mode_t mode, int *fd)
 {
-	STUB_ONLY
+	(void)flags;
+	(void)mode;
+	int r = syscall1(kKrxFileOpen, (uintptr_t)pathname, NULL);
+	if (r >= 0) {
+		*fd = r;
+		return 0;
+	}
+	return -r;
 }
 
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read)
 {
-	STUB_ONLY
+	int r = syscall3(kKrxFileReadCached, fd, (uintptr_t)buf, count, NULL);
+	if (r >= 0) {
+		*bytes_read = r;
+		return 0;
+	}
+	return -r;
 }
 
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)
 {
-	STUB_ONLY
+	off_t r = syscall2(kKrxFileSeek, fd, offset, NULL);
+	if (r >= 0) {
+		*new_offset = r;
+		return 0;
+	}
+	return -r;
 }
 
 int sys_close(int fd)
 {
-	STUB_ONLY
+	return 0;
 }
 
 int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window)
 {
-	STUB_ONLY
+	uintptr_t addr;
+	int r = syscall6(kKrxVmMap, (uintptr_t)hint, size, prot,
+	    flags, fd, offset, &addr);
+	if (r == 0) {
+		*window = (void *)addr;
+		return 0;
+	}
+	return -r;
 }
 
 
