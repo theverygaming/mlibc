@@ -740,7 +740,7 @@ void ObjectRepository::_parseDynamic(SharedObject *object) {
 		case DT_VERSYM:
 		case DT_VERDEF: case DT_VERDEFNUM:
 		case DT_VERNEED: case DT_VERNEEDNUM:
-#ifdef __riscv
+#if defined (__riscv) || defined (__m68k__)
 		case DT_TEXTREL: // Work around https://sourceware.org/bugzilla/show_bug.cgi?id=24673.
 #endif
 			break;
@@ -1576,6 +1576,11 @@ void Loader::_processRelocations(Relocation &rel) {
 	switch(rel.type()) {
 	case R_NONE:
 		break;
+
+	case R_OFFSET: {
+		rel.relocate((elf_addr)rel.destination() + p->symbol()->st_value - (elf_addr)rel.destination());
+	} break;
+
 
 	case R_JUMP_SLOT: {
 		__ensure(!rel.addend_norel());
