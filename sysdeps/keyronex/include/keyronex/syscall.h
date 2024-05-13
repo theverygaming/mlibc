@@ -15,6 +15,8 @@ enum krx_syscall {
 	kKrxFileOpen,
 	kKrxFileReadCached,
 	kKrxFileSeek,
+
+	kKrxForkThread,
 };
 
 #if defined(__x86_64__)

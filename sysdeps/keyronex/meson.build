@@ -6,7 +6,8 @@ rtld_sources += files(
 libc_sources += files(
 	'generic/entry.cpp',
 	'generic/generic.cpp',
-#	host_machine.cpu_family() / 'thread.S'
+	'generic/thread.cpp',
+	host_machine.cpu_family() / 'thread.S'
 )
 
 if not no_headers
