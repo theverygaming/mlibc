@@ -58,17 +58,18 @@ extern "C" void *__m68k_read_tp (void)
 
 [[gnu::weak]] int sys_futex_tid()
 {
-	return 1;
+	return syscall0(kKrxGetTid, NULL);
 }
 
 int sys_futex_wait(int *pointer, int expected, const struct timespec *time)
 {
-	STUB_ONLY
+	(void)time;
+	return -syscall3(kKrxFutexWait, (uintptr_t)pointer, expected, 0, NULL);
 }
 
 int sys_futex_wake(int *pointer)
 {
-	return 0;
+	return -syscall1(kKrxFutexWake, (uintptr_t)pointer, NULL);
 }
 
 [[noreturn]] void sys_exit(int status)

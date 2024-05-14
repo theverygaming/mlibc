@@ -17,6 +17,9 @@ enum krx_syscall {
 	kKrxFileSeek,
 
 	kKrxForkThread,
+	kKrxGetTid,
+	kKrxFutexWait,
+	kKrxFutexWake,
 };
 
 #if defined(__x86_64__)
