@@ -1578,9 +1578,8 @@ void Loader::_processRelocations(Relocation &rel) {
 		break;
 
 	case R_OFFSET: {
-		rel.relocate((elf_addr)rel.destination() + p->symbol()->st_value - (elf_addr)rel.destination());
+		rel.relocate(*(elf_addr*)rel.destination() + rel.object()->baseAddress + rel.addend_rel() + p->symbol()->st_value - (elf_addr)rel.destination());
 	} break;
-
 
 	case R_JUMP_SLOT: {
 		__ensure(!rel.addend_norel());
