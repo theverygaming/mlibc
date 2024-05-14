@@ -38,7 +38,11 @@ sys_libc_panic()
 
 int sys_tcb_set(void *pointer)
 {
+#if defined(__m68k__)
 	syscall1(kKrxTcbSet, (uintptr_t)pointer + 0x7000 + sizeof(Tcb), NULL);
+#elif defined(__amd64__)
+	syscall1(kKrxTcbSet, (uintptr_t)pointer, NULL);
+#endif
 	return 0;
 }
 
