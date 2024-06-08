@@ -74,7 +74,9 @@ int sys_futex_wake(int *pointer)
 
 [[noreturn]] void sys_exit(int status)
 {
-	STUB_ONLY
+	(void)status;
+	syscall0(kKrxThreadExit, NULL);
+	sys_libc_panic();
 }
 
 int sys_anon_allocate(size_t size, void **pointer)

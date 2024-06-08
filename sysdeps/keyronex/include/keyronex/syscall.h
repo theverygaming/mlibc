@@ -11,11 +11,13 @@ enum krx_syscall {
 
 	kKrxVmAllocate,
 	kKrxVmMap,
+	kKrxVmUnmap,
 
 	kKrxFileOpen,
 	kKrxFileReadCached,
 	kKrxFileSeek,
 
+	kKrxThreadExit,
 	kKrxForkThread,
 	kKrxGetTid,
 	kKrxFutexWait,
