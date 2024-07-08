@@ -14,7 +14,10 @@ enum krx_syscall {
 	kKrxVmUnmap,
 
 	kKrxFileOpen,
+	kKrxFileClose,
 	kKrxFileReadCached,
+	kKrxFileWriteCached,
+	kKrxFileIoCtl,
 	kKrxFileSeek,
 
 	kKrxThreadExit,

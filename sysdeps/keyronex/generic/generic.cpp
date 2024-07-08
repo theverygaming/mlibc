@@ -120,9 +120,19 @@ int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read)
 	return -r;
 }
 
+int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written)
+{
+	int r = syscall3(kKrxFileWriteCached, fd, (uintptr_t)buf, count, NULL);
+	if (r >= 0) {
+		*bytes_written = r;
+		return 0;
+	}
+	return -r;
+}
+
 int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)
 {
-	off_t r = syscall2(kKrxFileSeek, fd, offset, NULL);
+	off_t r = syscall3(kKrxFileSeek, fd, offset, whence, NULL);
 	if (r >= 0) {
 		*new_offset = r;
 		return 0;
@@ -132,6 +142,7 @@ int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)
 
 int sys_close(int fd)
 {
+	int r = syscall1(kKrxFileClose, fd, NULL);
 	return 0;
 }
 
@@ -149,11 +160,6 @@ int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offse
 
 
 int sys_vm_unmap(void *pointer, size_t size)
-{
-	STUB_ONLY
-}
-
-int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written)
 {
 	STUB_ONLY
 }
