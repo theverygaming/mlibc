@@ -148,7 +148,7 @@ sc_error(uintptr_t ret)
 		return -ret;
 	return 0;
 }
-#else
+#elif defined (__m68k__)
 
 /*
  * number: d0
@@ -278,6 +278,136 @@ syscall6(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
 	return d0;
 }
 
-#endif
+#elif defined (__aarch64__)
+/*
+ * number: x0
+ * arg 1: x1
+ * arg 2: x2
+ * arg 3: x3
+ * arg 4: x4
+ * arg 5: x5
+ * arg 6: x6
+ * return value: x0
+ * additional output: x1
+ */
+
+static inline uintptr_t
+syscall0(uintptr_t num, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1");
+
+	asm volatile("svc 0\n\t" : "+r"(x0) : "r"(x1) : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall1(uintptr_t num, uintptr_t arg1, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1;
+
+	asm volatile("svc 0\n\t" : "+r"(x0), "+r"(x1)::"memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall2(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1,
+			      x2 asm("x2") = arg2;
+
+	asm volatile("svc 0\n\t" : "+r"(x0), "+r"(x1) : "r"(x2) : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall3(intptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1,
+			      x2 asm("x2") = arg2, x3 asm("x3") = arg3;
+
+	asm volatile("svc 0\n\t"
+		     : "+r"(x0), "+r"(x1)
+		     : "r"(x2), "r"(x3)
+		     : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall4(intptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1,
+			      x2 asm("x2") = arg2, x3 asm("x3") = arg3,
+			      x4 asm("x4") = arg4;
+
+	asm volatile("svc 0\n\t"
+		     : "+r"(x0), "+r"(x1)
+		     : "r"(x2), "r"(x3), "r"(x4)
+		     : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall5(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t arg5, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1,
+			      x2 asm("x2") = arg2, x3 asm("x3") = arg3,
+			      x4 asm("x4") = arg4, x5 asm("x5") = arg5;
+
+	asm volatile("svc 0\n\t"
+		     : "+r"(x0), "+r"(x1)
+		     : "r"(x2), "r"(x3), "r"(x4), "r"(x5)
+		     : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
+static inline uintptr_t
+syscall6(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t arg5, uintptr_t arg6, uintptr_t *out)
+{
+	register uintptr_t x0 asm("x0") = num, x1 asm("x1") = arg1,
+			      x2 asm("x2") = arg2, x3 asm("x3") = arg3,
+			      x4 asm("x4") = arg4, x5 asm("x5") = arg5,
+			      x6 asm("x6") = arg6;
+
+	asm volatile("svc 0\n\t"
+		     : "+r"(x0), "+r"(x1)
+		     : "r"(x2), "r"(x3), "r"(x4), "r"(x5), "r"(x6)
+		     : "memory");
+
+	if (out)
+		*out = x1;
+
+	return x0;
+}
+
 
 #endif
+
+#endif /* _KEYRONEX__SYSCALL_H */

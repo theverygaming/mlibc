@@ -8,3 +8,4 @@ _start:
 	bl __mlibc_entry
 
 .section .note.GNU-stack,"",%progbits
+
