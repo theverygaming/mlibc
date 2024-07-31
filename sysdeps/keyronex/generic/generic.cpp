@@ -42,6 +42,10 @@ int sys_tcb_set(void *pointer)
 	syscall1(kKrxTcbSet, (uintptr_t)pointer + 0x7000 + sizeof(Tcb), NULL);
 #elif defined(__amd64__)
 	syscall1(kKrxTcbSet, (uintptr_t)pointer, NULL);
+#elif defined(__aarch64__)
+	uintptr_t addr = reinterpret_cast<uintptr_t>(pointer);
+	addr += sizeof(Tcb) - 0x10;
+	asm volatile("msr tpidr_el0, %0" ::"r"(addr));
 #endif
 	return 0;
 }
