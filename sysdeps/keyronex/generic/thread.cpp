@@ -64,6 +64,8 @@ extern "C" void __mlibc_thread_entry();
 
 		void **stack_it = (void **)*stack;
 
+
+		*--stack_it = NULL;
 		*--stack_it = arg;
 		*--stack_it = tcb;
 		*--stack_it = entry;
