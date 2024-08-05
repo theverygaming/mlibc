@@ -407,6 +407,134 @@ syscall6(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
 	return x0;
 }
 
+#elif defined(__riscv)
+/*
+ * number: a0
+ * arg 1: a1
+ * arg 2: a2
+ * arg 3: a3
+ * arg 4: a4
+ * arg 5: a5
+ * arg 6: a6
+ * return value: a0
+ * additional output: a1
+ */
+
+static inline uintptr_t
+syscall0(uintptr_t num, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1");
+
+	asm volatile("ecall\n\t" : "+r"(a0) : "r"(a1) : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall1(uintptr_t num, uintptr_t arg1, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1;
+
+	asm volatile("ecall\n\t" : "+r"(a0), "+r"(a1)::"memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall2(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1,
+			      a2 asm("a2") = arg2;
+
+	asm volatile("ecall\n\t" : "+r"(a0), "+r"(a1) : "r"(a2) : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall3(intptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1,
+			      a2 asm("a2") = arg2, a3 asm("a3") = arg3;
+
+	asm volatile("ecall\n\t"
+		     : "+r"(a0), "+r"(a1)
+		     : "r"(a2), "r"(a3)
+		     : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall4(intptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1,
+			      a2 asm("a2") = arg2, a3 asm("a3") = arg3,
+			      a4 asm("a4") = arg4;
+
+	asm volatile("ecall\n\t"
+		     : "+r"(a0), "+r"(a1)
+		     : "r"(a2), "r"(a3), "r"(a4)
+		     : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall5(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t arg5, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1,
+			      a2 asm("a2") = arg2, a3 asm("a3") = arg3,
+			      a4 asm("a4") = arg4, a5 asm("a5") = arg5;
+
+	asm volatile("ecall\n\t"
+		     : "+r"(a0), "+r"(a1)
+		     : "r"(a2), "r"(a3), "r"(a4), "r"(a5)
+		     : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
+
+static inline uintptr_t
+syscall6(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
+    uintptr_t arg4, uintptr_t arg5, uintptr_t arg6, uintptr_t *out)
+{
+	register uintptr_t a0 asm("a0") = num, a1 asm("a1") = arg1,
+			      a2 asm("a2") = arg2, a3 asm("a3") = arg3,
+			      a4 asm("a4") = arg4, a5 asm("a5") = arg5,
+			      a6 asm("a6") = arg6;
+
+	asm volatile("ecall\n\t"
+		     : "+r"(a0), "+r"(a1)
+		     : "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6)
+		     : "memory");
+
+	if (out)
+		*out = a1;
+
+	return a0;
+}
 
 #endif
 
