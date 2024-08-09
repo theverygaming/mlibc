@@ -46,6 +46,10 @@ int sys_tcb_set(void *pointer)
 	uintptr_t addr = reinterpret_cast<uintptr_t>(pointer);
 	addr += sizeof(Tcb) - 0x10;
 	asm volatile("msr tpidr_el0, %0" ::"r"(addr));
+#elif defined(__riscv)
+	uintptr_t addr = reinterpret_cast<uintptr_t>(pointer);
+	addr += sizeof(Tcb);
+	asm volatile("mv tp, %0" ::"r"(addr));
 #endif
 	return 0;
 }
