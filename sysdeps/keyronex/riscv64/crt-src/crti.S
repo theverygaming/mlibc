@@ -1,10 +1,10 @@
 .section .init
 .global _init
 _init:
-	unimp
+	ret
 
 .section .fini
 .global _fini
 _fini:
-	unimp
+	ret
 .section .note.GNU-stack,"",%progbits
