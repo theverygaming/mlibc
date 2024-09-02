@@ -19,6 +19,7 @@ enum krx_syscall {
 	kKrxFileWriteCached,
 	kKrxFileIoCtl,
 	kKrxFileSeek,
+	kKrxFileStat,
 
 	kKrxThreadExit,
 	kKrxForkThread,

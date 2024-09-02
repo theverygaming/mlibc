@@ -121,6 +121,9 @@ int sys_open(const char *pathname, int flags, mode_t mode, int *fd)
 int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read)
 {
 	int r = syscall3(kKrxFileReadCached, fd, (uintptr_t)buf, count, NULL);
+
+	mlibc::infoLogger() << "SYS_READ CALLED ON FD " << fd << "!\n"
+			    << frg::endlog;
 	if (r >= 0) {
 		*bytes_read = r;
 		return 0;
@@ -148,10 +151,60 @@ int sys_seek(int fd, off_t offset, int whence, off_t *new_offset)
 	return -r;
 }
 
+int
+sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
+    struct stat *statbuf)
+{
+	uintptr_t r;
+
+	switch (fsfdt) {
+	case fsfd_target::path:
+		fd = AT_FDCWD;
+		break;
+
+	case fsfd_target::fd:
+		flags |= AT_EMPTY_PATH;
+
+	case fsfd_target::fd_path:
+		break;
+
+	default:
+		__ensure(!"stat: Invalid fsfdt");
+		__builtin_unreachable();
+	}
+
+	r = syscall4(kKrxFileStat, fd, (uintptr_t)path, flags,
+	    (uintptr_t)statbuf, NULL);
+	return -r;
+}
+
+int
+sys_isatty(int fd)
+{
+	struct winsize ws;
+	int result;
+
+	if (!sys_ioctl(fd, TIOCGWINSZ, &ws, &result))
+		return 0;
+
+	return ENOTTY;
+}
+
+int
+sys_ioctl(int fd, unsigned long request, void *arg, int *result)
+{
+	uintptr_t r = syscall3(kKrxFileIoCtl, fd, request, (uintptr_t)arg,
+	    NULL);
+	if (r < 0)
+		return -r;
+	*result = r;
+	return 0;
+}
+
 int sys_close(int fd)
 {
 	int r = syscall1(kKrxFileClose, fd, NULL);
-	return 0;
+	return -r;
 }
 
 int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window)
@@ -174,7 +227,53 @@ int sys_vm_unmap(void *pointer, size_t size)
 
 int sys_clock_get(int clock, time_t *secs, long *nanos)
 {
-	STUB_ONLY
+	return 0;
+}
+
+pid_t
+sys_getpid()
+{
+	return 1;
+}
+
+pid_t
+sys_getppid()
+{
+	return 1;
+}
+
+uid_t
+sys_geteuid()
+{
+	mlibc::infoLogger() << "mlibc: sys_geteuid is a stub" << frg::endlog;
+	return 0;
+}
+
+uid_t
+sys_getuid()
+{
+	mlibc::infoLogger() << "mlibc: sys_setuid is a stub" << frg::endlog;
+	return 0;
+}
+
+gid_t
+sys_getgid()
+{
+	mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
+	return 0;
+}
+
+gid_t
+sys_getegid()
+{
+	mlibc::infoLogger() << "mlibc: sys_setgid is a stub" << frg::endlog;
+	return 0;
+}
+
+int
+sys_getpgid(pid_t, pid_t *)
+{
+	return 0;
 }
 
 } // namespace mlibc
