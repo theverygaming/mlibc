@@ -276,4 +276,17 @@ sys_getpgid(pid_t, pid_t *)
 	return 0;
 }
 
+int
+sys_fork(pid_t *child)
+{
+	uintptr_t ret = syscall0(kKrxFork, NULL);
+
+	if (int err = sc_error(ret); err) {
+		return err;
+	}
+
+	*child = ret;
+	return 0;
+}
+
 } // namespace mlibc

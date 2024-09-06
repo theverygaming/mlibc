@@ -30,7 +30,17 @@ enum krx_syscall {
 	kKrxGetTid,
 	kKrxFutexWait,
 	kKrxFutexWake,
+
+	kKrxFork,
 };
+
+static inline int
+sc_error(uintptr_t ret)
+{
+	if (ret > -4096UL)
+		return -ret;
+	return 0;
+}
 
 #if defined(__x86_64__)
 static inline uintptr_t
@@ -144,14 +154,6 @@ syscall6(uintptr_t num, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3,
 		*out = ret2;
 
 	return ret;
-}
-
-static inline int
-sc_error(uintptr_t ret)
-{
-	if (ret > -4096UL)
-		return -ret;
-	return 0;
 }
 #elif defined (__m68k__)
 
