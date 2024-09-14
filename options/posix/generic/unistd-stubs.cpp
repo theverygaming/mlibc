@@ -114,7 +114,7 @@ int execle(const char *path, const char *arg0, ...) {
 	char *argv[argc + 1];
 	char **envp;
 	va_start(ap, arg0);
-	argv[0] = (char *)argv;
+	argv[0] = (char *)arg0;
 	for(i = 1; i <= argc; i++)
 		argv[i] = va_arg(ap, char *);
 	envp = va_arg(ap, char **);
@@ -538,6 +538,8 @@ ssize_t pread(int fd, void *buf, size_t n, off_t off) {
 	return num_read;
 }
 
+[[gnu::alias("pread")]] ssize_t pread64(int fd, void *buf, size_t n, off_t off);
+
 ssize_t pwrite(int fd, const void *buf, size_t n, off_t off) {
 	ssize_t num_written;
 
@@ -548,6 +550,8 @@ ssize_t pwrite(int fd, const void *buf, size_t n, off_t off) {
 	}
 	return num_written;
 }
+
+[[gnu::alias("pwrite")]] ssize_t pwrite64(int fd, const void *buf, size_t n, off_t off);
 
 ssize_t readlink(const char *__restrict path, char *__restrict buffer, size_t max_size) {
 	ssize_t length;
@@ -766,10 +770,16 @@ long sysconf(int number) {
 		case _SC_HOST_NAME_MAX:
 			mlibc::infoLogger() << "\e[31mmlibc: sysconf(_SC_HOST_NAME_MAX) unconditionally returns fallback value 256\e[39m" << frg::endlog;
 			return 256;
+		case _SC_LOGIN_NAME_MAX:
+			mlibc::infoLogger() << "\e[31mmlibc: sysconf(_SC_LOGIN_NAME_MAX) unconditionally returns fallback value 256\e[39m" << frg::endlog;
+			return 256;
 		case _SC_FSYNC:
 			return _POSIX_FSYNC;
 		case _SC_SAVED_IDS:
 			return _POSIX_SAVED_IDS;
+		case _SC_SYMLOOP_MAX:
+			mlibc::infoLogger() << "\e[31mmlibc: sysconf(_SC_SYMLOOP_MAX) unconditionally returns fallback value 8\e[39m" << frg::endlog;
+			return 8;
 		default:
 			mlibc::infoLogger() << "\e[31mmlibc: sysconf() call is not implemented, number: " << number << "\e[39m" << frg::endlog;
 			errno = EINVAL;
@@ -1127,19 +1137,59 @@ int access(const char *path, int mode) {
 	return 0;
 }
 
+namespace {
+	FILE *user_shell_global_file; // Used by setusershell/getusershell/endusershell.
+
+	bool user_shell_open_global_file() {
+		if(!user_shell_global_file) {
+			user_shell_global_file = fopen("/etc/shells", "r");
+			if(!user_shell_global_file) {
+				// if the file cannot be opened, we need to pretend one exists with
+				// these shells:
+				static char shells[] = "/bin/sh\n/bin/csh\n";
+
+				user_shell_global_file = fmemopen(shells, strlen(shells), "r");
+				if(user_shell_global_file == nullptr)
+					return false;
+			}
+		}
+
+		return true;
+	}
+
+	void user_shell_close_global_file() {
+		if(user_shell_global_file) {
+			fclose(user_shell_global_file);
+			user_shell_global_file = nullptr;
+		}
+	}
+}
+
 char *getusershell(void) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+	static char shell[PATH_MAX];
+	if(!user_shell_open_global_file())
+		return nullptr;
+
+	if (fgets(shell, PATH_MAX, user_shell_global_file)){
+		shell[strcspn(shell, "\n")] = '\0';
+		return shell;
+	}
+
+	if(ferror(user_shell_global_file))
+		errno = EIO;
+
+	return nullptr;
 }
 
 void setusershell(void) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+	if(!user_shell_open_global_file())
+		return;
+
+	rewind(user_shell_global_file);
 }
 
 void endusershell(void) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+	user_shell_close_global_file();
 }
 
 int isatty(int fd) {
@@ -1160,9 +1210,34 @@ int chroot(const char *ptr) {
 	return 0;
 }
 
-int daemon(int, int) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int daemon(int nochdir, int noclose) {
+	switch(fork()) {
+		case 0: break;
+		case -1: return -1;
+		default: _exit(0);
+	}
+
+	if(setsid() < 0)
+		return -1;
+
+	if(!nochdir && chdir("/"))
+		return -1;
+
+	if(!noclose) {
+		int fd = open("/dev/null", O_RDWR);
+		if(fd < 0)
+			return -1;
+
+		bool failed = false;
+		if(dup2(fd, 0) < 0 || dup2(fd, 1) < 0 || dup2(fd, 2) < 0)
+			failed = true;
+		if(fd > 2)
+			close(fd);
+		if(failed)
+			return -1;
+	}
+
+	return 0;
 }
 
 char *ctermid(char *s) {

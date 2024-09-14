@@ -531,7 +531,7 @@ int sys_ttyname(int fd, char *buf, size_t size) {
 
 	managarm::posix::SvrResponse<MemoryAllocator> resp(getSysdepsAllocator());
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
-	if(resp.error() ==  managarm::posix::Errors::BAD_FD) {
+	if(resp.error() ==  managarm::posix::Errors::NO_SUCH_FD) {
 		return EBADF;
 	}else if(resp.error() == managarm::posix::Errors::NOT_A_TTY) {
 		return ENOTTY;
@@ -852,7 +852,7 @@ int sys_msg_send(int sockfd, const struct msghdr *hdr, int flags, ssize_t *lengt
 		return EBADF;
 
 	size_t overall_size = 0;
-	for(int i = 0; i < hdr->msg_iovlen; i++) {
+	for(size_t i = 0; i < hdr->msg_iovlen; i++) {
 		HelSgItem item{
 			.buffer = hdr->msg_iov[i].iov_base,
 			.length = hdr->msg_iov[i].iov_len,
@@ -867,21 +867,32 @@ int sys_msg_send(int sockfd, const struct msghdr *hdr, int flags, ssize_t *lengt
 	req.set_flags(flags);
 	req.set_size(overall_size);
 
+	req.set_has_cmsg_creds(false);
+	req.set_has_cmsg_rights(false);
 	for(auto cmsg = CMSG_FIRSTHDR(hdr); cmsg; cmsg = CMSG_NXTHDR(hdr, cmsg)) {
 		__ensure(cmsg->cmsg_level == SOL_SOCKET);
-		if(cmsg->cmsg_type == SCM_CREDENTIALS) {
-			mlibc::infoLogger() << "mlibc: SCM_CREDENTIALS requested but we don't handle that yet!" << frg::endlog;
-			return EINVAL;
-		}
-		__ensure(cmsg->cmsg_type == SCM_RIGHTS);
 		__ensure(cmsg->cmsg_len >= sizeof(struct cmsghdr));
-
-		size_t size = cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr));
-		__ensure(!(size % sizeof(int)));
-		for(size_t off = 0; off < size; off += sizeof(int)) {
-			int fd;
-			memcpy(&fd, CMSG_DATA(cmsg) + off, sizeof(int));
-			req.add_fds(fd);
+		if(cmsg->cmsg_type == SCM_CREDENTIALS) {
+			req.set_has_cmsg_creds(true);
+			size_t size = cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr));
+			__ensure(size == sizeof(struct ucred));
+			struct ucred creds;
+			memcpy(&creds, CMSG_DATA(cmsg), sizeof(struct ucred));
+			req.set_creds_pid(creds.pid);
+			req.set_creds_uid(creds.uid);
+			req.set_creds_gid(creds.gid);
+		} else if(cmsg->cmsg_type == SCM_RIGHTS) {
+			req.set_has_cmsg_rights(true);
+			size_t size = cmsg->cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr));
+			__ensure(!(size % sizeof(int)));
+			for(size_t off = 0; off < size; off += sizeof(int)) {
+				int fd;
+				memcpy(&fd, CMSG_DATA(cmsg) + off, sizeof(int));
+				req.add_fds(fd);
+			}
+		} else {
+			mlibc::infoLogger() << "mlibc: sys_msg_send only supports SCM_RIGHTS or SCM_CREDENTIALS, got: " << cmsg->cmsg_type << "!" << frg::endlog;
+			return EINVAL;
 		}
 	}
 
@@ -928,6 +939,8 @@ int sys_msg_send(int sockfd, const struct msghdr *hdr, int flags, ssize_t *lengt
 		return EAFNOSUPPORT;
 	}else if(resp.error() == managarm::fs::Errors::MESSAGE_TOO_LARGE) {
 		return EMSGSIZE;
+	}else if(resp.error() == managarm::fs::Errors::ILLEGAL_OPERATION_TARGET) {
+		return EOPNOTSUPP;
 	}else{
 		__ensure(resp.error() == managarm::fs::Errors::SUCCESS);
 		*length = resp.size();
@@ -1621,6 +1634,8 @@ int sys_read(int fd, void *data, size_t max_size, ssize_t *bytes_read) {
 		return EAGAIN;
 	}else if(resp.error() == managarm::fs::Errors::IS_DIRECTORY) {
 		return EISDIR;
+	}else if(resp.error() == managarm::fs::Errors::NOT_CONNECTED) {
+		return ENOTCONN;
 	}else if(resp.error() == managarm::fs::Errors::END_OF_FILE) {
 		*bytes_read = 0;
 		return 0;
@@ -2098,6 +2113,12 @@ int sys_rmdir(const char *path) {
 	resp.ParseFromArray(recv_resp.data(), recv_resp.length());
 	if(resp.error() == managarm::posix::Errors::FILE_NOT_FOUND) {
 		return ENOENT;
+	}else if(resp.error() == managarm::posix::Errors::DIRECTORY_NOT_EMPTY) {
+		return ENOTEMPTY;
+	}else if(resp.error() == managarm::posix::Errors::INTERNAL_ERROR) {
+		return EIEIO;
+	}else if(resp.error() == managarm::posix::Errors::NOT_A_DIRECTORY) {
+		return ENOTDIR;
 	}else{
 		__ensure(resp.error() == managarm::posix::Errors::SUCCESS);
 		return 0;
@@ -2202,6 +2223,14 @@ int sys_unlinkat(int fd, const char *path, int flags) {
 		return EBUSY;
 	}else if(resp.error() == managarm::posix::Errors::IS_DIRECTORY) {
 		return EISDIR;
+	}else if(resp.error() == managarm::posix::Errors::ILLEGAL_ARGUMENTS) {
+		return EINVAL;
+	}else if(resp.error() == managarm::posix::Errors::BAD_FD) {
+		return EBADF;
+	}else if(resp.error() == managarm::posix::Errors::NOT_A_DIRECTORY) {
+		return ENOTDIR;
+	}else if(resp.error() == managarm::posix::Errors::DIRECTORY_NOT_EMPTY) {
+		return ENOTEMPTY;
 	}else{
 		__ensure(resp.error() == managarm::posix::Errors::SUCCESS);
 		return 0;

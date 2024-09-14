@@ -17,6 +17,12 @@
 #include <sys/syscall.h>
 #include "cxx-syscall.hpp"
 
+#if __MLIBC_LINUX_OPTION && !defined(MLIBC_BUILDING_RTLD)
+
+#include "generic-helpers/netlink.hpp"
+
+#endif
+
 #define STUB_ONLY { __ensure(!"STUB_ONLY function was called"); __builtin_unreachable(); }
 #define UNUSED(x) (void)(x);
 
@@ -1533,6 +1539,18 @@ int sys_reboot(int cmd) {
 	return 0;
 }
 
+int sys_getifaddrs(struct ifaddrs **out) {
+	*out = nullptr;
+
+	NetlinkHelper nl;
+	bool link_ret = nl.send_request(RTM_GETLINK) && nl.recv(&getifaddrs_callback, out);
+	__ensure(link_ret);
+	bool addr_ret = nl.send_request(RTM_GETADDR) && nl.recv(&getifaddrs_callback, out);
+	__ensure(addr_ret);
+
+	return 0;
+}
+
 #endif // __MLIBC_LINUX_OPTION
 
 int sys_times(struct tms *tms, clock_t *out) {
@@ -1806,7 +1824,7 @@ int sys_getpgid(pid_t pid, pid_t *out) {
 	return 0;
 }
 
-int sys_getgroups(size_t size, const gid_t *list, int *retval) {
+int sys_getgroups(size_t size, gid_t *list, int *retval) {
 	auto ret = do_syscall(SYS_getgroups, size, list);
 	if (int e = sc_error(ret); e)
 		return e;

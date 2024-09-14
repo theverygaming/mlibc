@@ -20,6 +20,7 @@ extern "C" {
 #define ICMP6_FILTER_BLOCKOTHERS 3
 #define ICMP6_FILTER_PASSONLY 4
 #define ICMP6_ECHO_REQUEST 128
+#define ICMP6_ECHO_REPLY 129
 
 struct icmp6_filter {
 	uint32_t icmp6_filt[8];
@@ -130,6 +131,30 @@ struct nd_opt_mtu {
 	uint16_t nd_opt_mtu_reserved;
 	uint32_t nd_opt_mtu_mtu;
 };
+
+struct nd_neighbor_solicit {
+	struct icmp6_hdr nd_ns_hdr;
+	struct in6_addr nd_ns_target;
+};
+
+struct nd_neighbor_advert {
+	struct icmp6_hdr nd_na_hdr;
+	struct in6_addr nd_na_target;
+};
+#define nd_na_type nd_na_hdr.icmp6_type
+#define nd_na_code nd_na_hdr.icmp6_code
+#define nd_na_cksum nd_na_hdr.icmp6_cksum
+#define nd_na_flags_reserved nd_na_hdr.icmp6_data32[0]
+
+struct nd_redirect {
+	struct icmp6_hdr nd_rd_hdr;
+	struct in6_addr nd_rd_target;
+	struct in6_addr nd_rd_dst;
+};
+
+#define ND_NA_FLAG_OVERRIDE 0x00000020
+#define ND_NA_FLAG_SOLICITED 0x00000040
+#define ND_NA_FLAG_ROUTER 0x00000080
 
 #ifdef __cplusplus
 }

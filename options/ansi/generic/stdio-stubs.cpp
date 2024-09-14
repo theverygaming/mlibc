@@ -54,7 +54,7 @@ struct PrintfAgent {
 		case 'p': case 's':
 			frg::do_printf_chars(*_formatter, t, opts, szmod, _vsp);
 			break;
-		case 'd': case 'i': case 'o': case 'x': case 'X': case 'u':
+		case 'd': case 'i': case 'o': case 'x': case 'X': case 'b': case 'B': case 'u':
 			frg::do_printf_ints(*_formatter, t, opts, szmod, _vsp);
 			break;
 		case 'f': case 'F': case 'g': case 'G': case 'e': case 'E':
@@ -381,19 +381,32 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 			fmt++;
 		}
 
+		bool allocate_buf = false;
+		auto temp_dest = frg::string<MemoryAllocator>{getAllocator()};
+		int count = 0;
+
+		const auto append_to_buffer = [&](char c) {
+			if(allocate_buf) {
+				temp_dest += c;
+				count++;
+			} else {
+				char *typed_dest = (char *)dest;
+				if(typed_dest)
+					typed_dest[count++] = c;
+			}
+		};
+
 		int width = 0;
 		if (*fmt == '*') {
 			fmt++;
 		} else if (*fmt == '\'') {
-		/* TODO: numeric seperators locale stuff */
-			 mlibc::infoLogger() << "do_scanf: \' not implemented!" << frg::endlog;
+			/* TODO: numeric seperators locale stuff */
+			mlibc::infoLogger() << "do_scanf: \' not implemented!" << frg::endlog;
 			fmt++;
 			continue;
 		} else if (*fmt == 'm') {
-			/* TODO: allocate buffer for them */
-			mlibc::infoLogger() << "do_scanf: m not implemented!" << frg::endlog;
+			allocate_buf = true;
 			fmt++;
-			continue;
 		} else if (*fmt >= '0' && *fmt <= '9') {
 			/* read in width specifier */
 			width = 0;
@@ -583,36 +596,56 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 					store_int(dest, type, res);
 				break;
 			}
-			case 's': {
-				char *typed_dest = (char *)dest;
+			case 'b': {
+				unsigned long long res = 0;
 				char c = handler.look_ahead();
 				int count = 0;
 				EOF_CHECK(c == '\0');
+				if (c == '0') {
+					handler.consume();
+					c = handler.look_ahead();
+					if (c == 'b' || c == 'B') {
+						handler.consume();
+						c = handler.look_ahead();
+					}
+				}
+				while (true) {
+					if (c == '0' || c == '1') {
+						handler.consume();
+						res = res * 2 + (c - '0');
+					} else {
+						break;
+					}
+					count++;
+					c = handler.look_ahead();
+				}
+				NOMATCH_CHECK(count == 0);
+				if (dest)
+					store_int(dest, type, res);
+				break;
+			}
+			case 's': {
+				char c = handler.look_ahead();
+				EOF_CHECK(c == '\0');
 				while (c && !isspace(c)) {
 					handler.consume();
-					if (typed_dest)
-						typed_dest[count] = c;
+					append_to_buffer(c);
 					c = handler.look_ahead();
-					count++;
 					if (width && count >= width)
 						break;
 				}
 				NOMATCH_CHECK(count == 0);
-				if (typed_dest)
-					typed_dest[count] = '\0';
+				append_to_buffer('\0');
 				break;
 			}
 			case 'c': {
-				char *typed_dest = (char *)dest;
 				char c = handler.look_ahead();
 				EOF_CHECK(c == '\0');
-				int count = 0;
 				if (!width)
 					width = 1;
 				while (c && count < width) {
 					handler.consume();
-					if (typed_dest)
-						typed_dest[count] = c;
+					append_to_buffer(c);
 					c = handler.look_ahead();
 					count++;
 				}
@@ -648,22 +681,17 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 					scanset[1 + *fmt] = 1 - invert;
 				}
 
-				char *typed_dest = (char *)dest;
-				int count = 0;
 				char c = handler.look_ahead();
 				EOF_CHECK(c == '\0');
 				while (c && (!width || count < width)) {
 					handler.consume();
 					if (!scanset[1 + c])
 						break;
-					if (typed_dest)
-						typed_dest[count] = c;
+					append_to_buffer(c);
 					c = handler.look_ahead();
-					count++;
 				}
 				NOMATCH_CHECK(count == 0);
-				if (typed_dest)
-					typed_dest[count] = '\0';
+				append_to_buffer('\0');
 				break;
 			}
 			case 'p': {
@@ -709,6 +737,16 @@ static int do_scanf(H &handler, const char *fmt, __builtin_va_list args) {
 				continue;
 			}
 		}
+
+		if(allocate_buf && dest) {
+			char *temp = (char *)getAllocator().allocate(temp_dest.size() + 1);
+			memcpy(temp, temp_dest.data(), temp_dest.size());
+			temp[temp_dest.size()] = '\0';
+
+			char **dest_ptr = (char **)dest;
+			*dest_ptr = temp;
+		}
+
 		if (dest) match_count++;
 	}
 	return match_count;
@@ -999,15 +1037,29 @@ size_t fwrite(const void *buffer, size_t size , size_t count, FILE *file_base) {
 	return fwrite_unlocked(buffer, size, count, file_base);
 }
 
-int fgetpos(FILE *__restrict, fpos_t *__restrict) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int fgetpos(FILE *__restrict f, fpos_t *__restrict out) {
+	auto file = static_cast<mlibc::abstract_file *>(f);
+	off_t current_offset;
+
+	if(int e = file->tell(&current_offset); e) {
+		errno = e;
+		return -1;
+	}
+
+	*out = static_cast<fpos_t>(current_offset);
+
+	return 0;
 }
 
 // fseek() is provided by the POSIX sublibrary
-int fsetpos(FILE *, const fpos_t *) {
-	__ensure(!"Not implemented");
-	__builtin_unreachable();
+int fsetpos(FILE *f, const fpos_t *pos) {
+	auto file = static_cast<mlibc::abstract_file *>(f);
+	frg::unique_lock lock(file->_lock);
+	if(int e = file->seek(*pos, SEEK_SET); e) {
+		errno = e;
+		return -1;
+	}
+	return 0;
 }
 // ftell() is provided by the POSIX sublibrary
 

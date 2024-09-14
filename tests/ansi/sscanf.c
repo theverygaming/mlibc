@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -23,6 +24,10 @@ struct format_test_cases {
 	{"%u", "0420", 420, T_UINT, 1},
 	{"%o", "0420", 0420, T_UINT, 1},
 	{"%x", "0xCB7", 0xCB7, T_UINT, 1},
+#ifndef USE_HOST_LIBC
+	{"%b", "0b1011", 0b1011, T_UINT, 1},
+	{"%b", "0B1011", 0b1011, T_UINT, 1},
+#endif
 	{"%%", "%", 0, T_NONE, 0},
 	{"%c", "         I am not a fan of this solution.", ' ', T_CHAR, 1},
 	{" %c", "           CBT (capybara therapy)", 'C', T_CHAR, 1},
@@ -143,6 +148,15 @@ int main() {
 		char buf[50];
 		int ret = sscanf("", "%s", buf);
 		assert(ret == EOF);
+	}
+
+	{
+		char *str = NULL;
+		int ret = sscanf("Managarm", "%ms", &str);
+		assert(ret == 1);
+		assert(str != NULL);
+		assert(!strcmp(str, "Managarm"));
+		free(str);
 	}
 
 	test_matrix();

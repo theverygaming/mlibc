@@ -29,6 +29,7 @@ all_test_cases = [
 	'ansi/freopen',
 	'ansi/strxfrm',
 	'ansi/calloc',
+	'ansi/fgetpos',
 	'bsd/ns_get_put',
 	'bsd/reallocarray',
 	'bsd/strl',
@@ -95,6 +96,7 @@ all_test_cases = [
 	'posix/strdupa',
 	'posix/mkstemp',
 	'posix/waitid',
+        'posix/usershell',
 	'glibc/getopt',
 	'glibc/ffsl-ffsll',
 	'glibc/error_message_count',
@@ -109,6 +111,7 @@ all_test_cases = [
 	'linux/pthread_attr',
 	'linux/cpuset',
 	'linux/malloc-usable-size',
+	'linux/getifaddrs',
 ]
 
 if host_machine.system() == 'linux'

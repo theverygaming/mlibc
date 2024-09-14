@@ -43,17 +43,29 @@ internal_conf = configuration_data()
 mlibc_conf = configuration_data()
 
 if not headers_only
-	cshim_dep = dependency('cshim',
-				required: false,
-				fallback: ['cshim', 'cshim_dep'])
-	libc_deps += cshim_dep
-	rtld_deps += cshim_dep
+	add_languages('c', 'cpp')
+	c_compiler = meson.get_compiler('c')
+	cpp_compiler = meson.get_compiler('cpp')
 
-	cxxshim_dep = dependency('cxxshim',
-				 required: false,
-				 fallback: ['cxxshim', 'cxxshim_dep'])
-	libc_deps += cxxshim_dep
-	rtld_deps += cxxshim_dep
+	target_triple = run_command(c_compiler.cmd_array(), '-dumpmachine', check: true).stdout()
+	use_freestnd_hdrs = get_option('use_freestnd_hdrs').disable_auto_if(
+			target_triple.to_lower().contains('mlibc'))
+
+	freestnd_c_hdrs_dep = dependency(
+		'freestnd-c-hdrs-' + host_machine.cpu_family(),
+		required: use_freestnd_hdrs,
+		fallback: ['freestnd-c-hdrs', 'freestnd_c_hdrs_dep'],
+	)
+	libc_deps += freestnd_c_hdrs_dep
+	rtld_deps += freestnd_c_hdrs_dep
+
+	freestnd_cxx_hdrs_dep = dependency(
+		'freestnd-cxx-hdrs-' + host_machine.cpu_family(),
+		required: use_freestnd_hdrs,
+		fallback: ['freestnd-cxx-hdrs', 'freestnd_cxx_hdrs_dep'],
+	)
+	libc_deps += freestnd_cxx_hdrs_dep
+	rtld_deps += freestnd_cxx_hdrs_dep
 
 	frigg_dep = dependency(
 		'frigg',
@@ -63,17 +75,13 @@ if not headers_only
 	libc_deps += frigg_dep
 	rtld_deps += frigg_dep
 
-	add_languages('c', 'cpp')
-	c_compiler = meson.get_compiler('c')
-	cpp_compiler = meson.get_compiler('cpp')
-
 	add_project_arguments('-Wno-unused-function', '-D__MLIBC_BUILDING_MLIBC', language: ['c', 'cpp'])
 	add_project_arguments('-nostdinc', '-fno-builtin', '-ffreestanding', language: ['c', 'cpp'])
 	add_project_arguments('-Werror=misleading-indentation', language: ['c', 'cpp'])
 	add_project_arguments('-fno-rtti', '-fno-exceptions', language: 'cpp')
 	add_project_link_arguments('-nostdlib', language: ['c', 'cpp'])
 
-	if not cshim_dep.found()
+	if not freestnd_c_hdrs_dep.found()
 		searchdirs = run_command(c_compiler.cmd_array(), '-print-search-dirs',
 					check: true).stdout()
 		searchdirs_arr = searchdirs.split('\n')
@@ -104,7 +112,7 @@ if not headers_only
 		libc_include_dirs += include_directories(ccdir / 'include')
 	endif
 
-	if not cxxshim_dep.found()
+	if not freestnd_cxx_hdrs_dep.found()
 		cplusplus_include_path = []
 
 		c_output = run_command(c_compiler.cmd_array(), '-E', '-v', '-x', 'c',
@@ -186,6 +194,9 @@ internal_conf.set10('MLIBC_DEBUG_ALLOCATOR', get_option('debug_allocator'))
 #----------------------------------------------------------------------------------------
 # Configuration based on sysdeps.
 #----------------------------------------------------------------------------------------
+
+rtld_include_dirs += include_directories('sysdeps/generic-helpers/include')
+libc_include_dirs += include_directories('sysdeps/generic-helpers/include')
 
 # Process sysdeps first, as sysdeps might want to disable unsupported options.
 provides_bits_syscall_h = false
@@ -304,8 +315,11 @@ if not disable_linux_option
 
 	rtld_include_dirs += include_directories('options/linux/include')
 	libc_include_dirs += include_directories('options/linux/include')
-	rtld_include_dirs += include_directories(get_option('linux_kernel_headers'))
-	libc_include_dirs += include_directories(get_option('linux_kernel_headers'))
+
+	linux_kernel_dep = declare_dependency(include_directories: include_directories(get_option('linux_kernel_headers')))
+
+	libc_deps += linux_kernel_dep
+	rtld_deps += linux_kernel_dep
 endif
 
 if not disable_glibc_option
@@ -353,6 +367,7 @@ internal_sources = [
 	'options/internal/generic/strings.cpp',
 	'options/internal/generic/ubsan.cpp',
 	'options/internal/generic/threads.cpp',
+	'options/internal/generic/search.cpp',
 	'options/internal/gcc/stack_protector.cpp',
 	'options/internal/gcc/guard-abi.cpp',
 	'options/internal/gcc/initfini.cpp',
@@ -389,6 +404,7 @@ if not no_headers
 		'options/internal/include/bits/cpu_set.h',
 		'options/internal/include/bits/threads.h',
 		'options/internal/include/bits/winsize.h',
+		'options/internal/include/bits/search.h',
 		subdir: 'bits'
 	)
 endif
